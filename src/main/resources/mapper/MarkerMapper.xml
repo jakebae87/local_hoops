@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demo.mapper.MarkerMapper">
+
+    <!-- ✅ 마커 저장 -->
+    <insert id="insertMarker">
+        INSERT INTO markers (latitude, longitude, title, content, images, created_at)
+        VALUES (#{latitude}, #{longitude}, #{title}, #{content}, #{images}, NOW())
+    </insert>
+
+    <!-- ✅ 특정 마커 상세 조회 -->
+    <select id="getMarkerById" parameterType="int" resultType="map">
+        SELECT * FROM markers WHERE id = #{id}
+    </select>
+
+    <!-- ✅ 특정 마커 삭제 -->
+    <delete id="deleteMarker" parameterType="int">
+        DELETE FROM markers WHERE id = #{id}
+    </delete>
+
+    <!-- ✅ 전체 마커 조회 -->
+    <select id="selectMarkers" resultType="map">
+        SELECT id, latitude, longitude, title, content, images, created_at FROM markers
+    </select>
+
+</mapper>
