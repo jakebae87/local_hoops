@@ -13,21 +13,38 @@ public class MarkerService {
         this.markerMapper = markerMapper;
     }
 
-    public void addMarker(Map<String, Object> markerData) {
-        markerMapper.insertMarker(markerData);
+    // ✅ 마커 등록 요청 (pending_markers에 저장)
+    public void requestMarker(Map<String, Object> markerData) {
+        markerMapper.insertPendingMarker(markerData);
     }
 
+    // ✅ 관리자 - 등록 요청된 마커 리스트 조회
+    public List<Map<String, Object>> getPendingMarkers() {
+        return markerMapper.selectPendingMarkers();
+    }
+
+    // ✅ 관리자 - 마커 승인 (pending_markers → markers 이동)
+    public void approveMarker(int id) {
+        Map<String, Object> marker = markerMapper.getPendingMarkerById(id);
+        if (marker != null) {
+            markerMapper.insertMarker(marker);
+            markerMapper.deletePendingMarker(id);
+        }
+    }
+
+    // ✅ 승인된 전체 마커 조회
     public List<Map<String, Object>> getMarkers() {
         return markerMapper.selectMarkers();
     }
 
-    // ✅ 특정 마커 상세 조회
+    // ✅ 특정 마커 조회
     public Map<String, Object> getMarkerById(int id) {
-        return markerMapper.getMarkerById(id);
+        return markerMapper.selectMarkerById(id);
     }
 
-    // ✅ 특정 마커 삭제
+    // ✅ 관리자 - 마커 삭제 (pending_markers 또는 markers)
     public void deleteMarker(int id) {
         markerMapper.deleteMarker(id);
+        markerMapper.deletePendingMarker(id);
     }
 }

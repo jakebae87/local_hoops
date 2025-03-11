@@ -5,25 +5,46 @@
 
 <mapper namespace="com.example.demo.mapper.MarkerMapper">
 
-    <!-- ✅ 마커 저장 -->
-    <insert id="insertMarker">
-        INSERT INTO markers (latitude, longitude, title, content, images, created_at)
-        VALUES (#{latitude}, #{longitude}, #{title}, #{content}, #{images}, NOW())
+    <!-- ✅ 마커 등록 요청 (pending_markers 테이블에 저장) -->
+    <insert id="insertPendingMarker">
+        INSERT INTO pending_markers (latitude, longitude, title, image, created_at)
+        VALUES (#{latitude}, #{longitude}, #{title}, #{image}, NOW());
     </insert>
 
+    <!-- ✅ 관리자 - 등록 요청된 마커 리스트 조회 -->
+    <select id="selectPendingMarkers" resultType="map">
+        SELECT * FROM pending_markers WHERE approved = FALSE;
+    </select>
+
+    <!-- ✅ 특정 등록 요청된 마커 조회 -->
+    <select id="getPendingMarkerById" resultType="map">
+        SELECT * FROM pending_markers WHERE id = #{id};
+    </select>
+
+    <!-- ✅ 마커 승인 (pending_markers → markers 테이블로 이동) -->
+    <insert id="insertMarker">
+        INSERT INTO markers (latitude, longitude, title, image, created_at, approved)
+        VALUES (#{latitude}, #{longitude}, #{title}, #{image}, NOW(), TRUE);
+    </insert>
+
+    <!-- ✅ 등록 요청 삭제 -->
+    <delete id="deletePendingMarker">
+        DELETE FROM pending_markers WHERE id = #{id};
+    </delete>
+
+    <!-- ✅ 전체 승인된 마커 리스트 조회 -->
+    <select id="selectMarkers" resultType="map">
+        SELECT * FROM markers WHERE approved = TRUE;
+    </select>
+
     <!-- ✅ 특정 마커 상세 조회 -->
-    <select id="getMarkerById" parameterType="int" resultType="map">
-        SELECT * FROM markers WHERE id = #{id}
+    <select id="selectMarkerById" resultType="map">
+        SELECT * FROM markers WHERE id = #{id};
     </select>
 
     <!-- ✅ 특정 마커 삭제 -->
-    <delete id="deleteMarker" parameterType="int">
-        DELETE FROM markers WHERE id = #{id}
+    <delete id="deleteMarker">
+        DELETE FROM markers WHERE id = #{id};
     </delete>
-
-    <!-- ✅ 전체 마커 조회 -->
-    <select id="selectMarkers" resultType="map">
-        SELECT id, latitude, longitude, title, content, images, created_at FROM markers
-    </select>
 
 </mapper>
