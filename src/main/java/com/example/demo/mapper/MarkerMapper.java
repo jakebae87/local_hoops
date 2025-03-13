@@ -31,4 +31,10 @@ public interface MarkerMapper {
     void deleteMarker(int id);
 
 	Map<String, Object> selectMarkerById(int id);
+
+	List<Map<String, Object>> getPendingMarkers();
+
+	List<Map<String, Object>> getMarkers();
+
+	void deleteRequestdMarker(Integer id);
 }
