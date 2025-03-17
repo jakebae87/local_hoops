@@ -37,8 +37,10 @@ public class MarkerController {
             // ✅ 데이터 변환 및 처리
             markerService.requestMarker(title, latitude, longitude, images);
             return ResponseEntity.ok(Map.of("message", "마커 등록 요청 완료. 관리자의 승인을 기다려 주세요."));
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body(Map.of("error", "마커 등록 요청 실패", "message", e.getMessage()));
+        } catch (IllegalArgumentException e) { // ✅ 500m 내 중복 예외 처리
+            return ResponseEntity.status(400).body(Map.of("error", "마커 등록 불가", "message", e.getMessage()));
+        } catch (Exception e) { // ✅ 기타 예외 처리
+            return ResponseEntity.status(500).body(Map.of("error", "마커 등록 요청 실패", "message", e.getMessage()));
         }
     }
 

@@ -1,6 +1,9 @@
 package com.example.demo.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -37,4 +40,11 @@ public interface MarkerMapper {
 	List<Map<String, Object>> getMarkers();
 
 	void deleteRequestdMarker(Integer id);
+
+    List<Map<String, Object>> findMarkersWithinRadius(
+            @Param("minLat") BigDecimal minLat,
+            @Param("maxLat") BigDecimal maxLat,
+            @Param("minLon") BigDecimal minLon,
+            @Param("maxLon") BigDecimal maxLon
+    );
 }

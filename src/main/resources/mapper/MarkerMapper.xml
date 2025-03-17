@@ -7,36 +7,43 @@
 
 	<insert id="insertPendingMarker" parameterType="Map">
 	    INSERT INTO pending_markers (latitude, longitude, title, image, created_at, approved)
-	    VALUES (#{latitude}, #{longitude}, #{title}, #{image}, NOW(), FALSE);
+	    VALUES (#{latitude}, #{longitude}, #{title}, #{image}, NOW(), FALSE)
 	</insert>
 	
 	<insert id="insertMarker" parameterType="Map">
 	    INSERT INTO markers (latitude, longitude, title, images, created_at, approved)
-	    VALUES (#{latitude}, #{longitude}, #{title}, #{image}, NOW(), TRUE);
+	    VALUES (#{latitude}, #{longitude}, #{title}, #{image}, NOW(), TRUE)
 	</insert>
 	
 	<select id="getPendingMarkers" resultType="Map">
-	    SELECT * FROM pending_markers WHERE approved = FALSE;
+	    SELECT * FROM pending_markers WHERE approved = FALSE
 	</select>
 	
 	<select id="getPendingMarkerById" parameterType="int" resultType="Map">
-	    SELECT * FROM pending_markers WHERE id = #{id};
+	    SELECT * FROM pending_markers WHERE id = #{id}
 	</select>
 	
 	<delete id="deletePendingMarker" parameterType="int">
-	    DELETE FROM pending_markers WHERE id = #{id};
+	    DELETE FROM pending_markers WHERE id = #{id}
 	</delete>
 	
 	<delete id="deleteMarker" parameterType="int">
-	    DELETE FROM markers WHERE id = #{id};
+	    DELETE FROM markers WHERE id = #{id}
 	</delete>
 	
 	<select id="getMarkers" resultType="Map">
-	    SELECT * FROM markers WHERE approved = TRUE;
+	    SELECT * FROM markers WHERE approved = TRUE
 	</select>
 	
 	<select id="getMarkerById" parameterType="int" resultType="Map">
-	    SELECT * FROM markers WHERE id = #{id};
+	    SELECT * FROM markers WHERE id = #{id}
+	</select>
+
+	<select id="findMarkersWithinRadius" resultType="Map">
+	    SELECT id, latitude, longitude, title 
+	    FROM markers
+	    WHERE (latitude BETWEEN #{minLat} AND #{maxLat})
+	      AND (longitude BETWEEN #{minLon} AND #{maxLon})
 	</select>
 
 </mapper>
