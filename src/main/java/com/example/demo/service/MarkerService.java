@@ -10,16 +10,29 @@ import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import com.example.demo.mapper.MarkerMapper;
 
 @Service
 public class MarkerService {
+    @Value("${ai.server.url}")
+    private String aiServerUrl;
+
+    private final RestTemplate restTemplate;
     private final MarkerMapper markerMapper;
+
     private static final double EARTH_RADIUS = 6371000; // 지구 반지름 (미터)
 
-    public MarkerService(MarkerMapper markerMapper) {
+    public MarkerService(RestTemplate restTemplate, MarkerMapper markerMapper) {
+        this.restTemplate = restTemplate;
         this.markerMapper = markerMapper;
     }
 
@@ -57,7 +70,7 @@ public class MarkerService {
 
             double distance = calculateDistance(latitude, longitude, existingLat, existingLon);
             if (distance < 500) {
-            	throw new IllegalArgumentException("500m 범위 이내에 등록된 농구장이 있습니다."); // 500m 내 중복이 있으면 마커 등록 중단
+                throw new IllegalArgumentException("500m 범위 이내에 등록된 농구장이 있습니다."); // 500m 내 중복이 있으면 마커 등록 중단
             }
         }
 
@@ -115,7 +128,7 @@ public class MarkerService {
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                        * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return EARTH_RADIUS * c; // 미터 단위 거리 반환
     }
@@ -171,4 +184,30 @@ public class MarkerService {
     public void deleteRequestdMarker(Integer id) {
         markerMapper.deletePendingMarker(id);
     }
+
+    // ✅ AI 서버로 모든 이미지 검증
+    public boolean validateImagesWithAI(List<MultipartFile> images) {
+        try {
+            for (MultipartFile image : images) {
+                String url = aiServerUrl + "/detect/";
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+                Map<String, Object> body = new HashMap<>();
+                body.put("file", image.getResource());
+
+                HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+                ResponseEntity<Map> response = restTemplate.postForEntity(url, requestEntity, Map.class);
+
+                if (!"valid".equals(response.getBody().get("result"))) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
 }
