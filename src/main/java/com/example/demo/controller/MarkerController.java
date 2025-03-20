@@ -25,7 +25,7 @@ public class MarkerController {
             @RequestParam("title") String title,
             @RequestParam("latitude") double latitude,
             @RequestParam("longitude") double longitude,
-            @RequestParam(value = "images", required = false) List<MultipartFile> images) {
+            @RequestParam(value = "files", required = false) List<MultipartFile> images) {
         try {
             System.out.println(
                     "📌 마커 등록 요청 - 제목: " + title + ", 위도: " + latitude + ", 경도: " + longitude + ", 이미지: " + images);

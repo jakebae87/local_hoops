@@ -12,13 +12,20 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+
 import com.example.demo.mapper.MarkerMapper;
 
 @Service
@@ -190,22 +197,43 @@ public class MarkerService {
         try {
             for (MultipartFile image : images) {
                 String url = aiServerUrl + "/detect/";
+
+                // ✅ MultipartFile을 ByteArrayResource로 변환
+                Resource fileResource = new ByteArrayResource(image.getBytes()) {
+                    @Override
+                    public String getFilename() {
+                        return image.getOriginalFilename();  // 원본 파일명 유지
+                    }
+                };
+
+                // ✅ Multipart 요청 바디 생성
+                MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                body.add("file", fileResource);  // FastAPI에서 `file` 필드로 받음
+
+                // ✅ HttpHeaders 설정 (multipart/form-data)
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
-                Map<String, Object> body = new HashMap<>();
-                body.put("file", image.getResource());
+                // ✅ HttpEntity 생성
+                HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-                HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-                ResponseEntity<Map> response = restTemplate.postForEntity(url, requestEntity, Map.class);
+                // ✅ AI 서버에 요청 전송
+                ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, Map.class);
 
-                if (!"valid".equals(response.getBody().get("result"))) {
+                if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                    System.out.println("✅ AI 응답: " + response.getBody());
+
+                    if (!"valid".equals(response.getBody().get("result"))) {
+                        return false;
+                    }
+                } else {
+                    System.err.println("🚨 AI 서버 응답 실패: " + response.getStatusCode());
                     return false;
                 }
             }
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("🚨 AI 검증 요청 중 오류 발생: " + e.getMessage());
             return false;
         }
     }
