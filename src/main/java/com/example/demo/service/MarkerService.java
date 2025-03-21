@@ -1,15 +1,22 @@
 package com.example.demo.service;
 
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.FileImageOutputStream;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -58,7 +65,6 @@ public class MarkerService {
 
     // ✅ 500m 범위 내 마커 조회 및 거리 계산 + 이미지 업로드 포함
     public void requestMarker(String title, double latitude, double longitude, List<MultipartFile> images) {
-        // 📌 위도/경도 범위 계산
         double latRange = metersToLatitudeDegrees(500);
         double lonRange = metersToLongitudeDegrees(500, latitude);
 
@@ -67,33 +73,27 @@ public class MarkerService {
         BigDecimal minLon = BigDecimal.valueOf(longitude - lonRange).setScale(6, RoundingMode.HALF_UP);
         BigDecimal maxLon = BigDecimal.valueOf(longitude + lonRange).setScale(6, RoundingMode.HALF_UP);
 
-        // 📌 DB에서 500m 내 마커 조회
         List<Map<String, Object>> nearbyMarkers = markerMapper.findMarkersWithinRadius(minLat, maxLat, minLon, maxLon);
 
-        // 📌 거리 계산 (DB 필터 후 Java에서 최종 거리 확인)
         for (Map<String, Object> marker : nearbyMarkers) {
             double existingLat = ((Double) marker.get("latitude"));
             double existingLon = ((Double) marker.get("longitude"));
-
             double distance = calculateDistance(latitude, longitude, existingLat, existingLon);
             if (distance < 500) {
-                throw new IllegalArgumentException("500m 범위 이내에 등록된 농구장이 있습니다."); // 500m 내 중복이 있으면 마커 등록 중단
+                throw new IllegalArgumentException("500m 범위 이내에 등록된 농구장이 있습니다.");
             }
         }
 
-        // ✅ 마커 데이터 저장 (pending_markers 테이블)
         Map<String, Object> markerData = new HashMap<>();
         markerData.put("title", title);
         markerData.put("latitude", latitude);
         markerData.put("longitude", longitude);
         markerData.put("approved", false);
 
-        // ✅ 이미지 업로드 처리
         if (images != null && !images.isEmpty()) {
             String uploadDir = "uploads/";
             Path uploadPath = Paths.get(uploadDir);
 
-            // 📁 uploads 폴더가 없으면 생성
             if (!Files.exists(uploadPath)) {
                 try {
                     Files.createDirectories(uploadPath);
@@ -110,13 +110,32 @@ public class MarkerService {
                 try {
                     String fileName = System.currentTimeMillis() + "_" + image.getOriginalFilename();
                     Path filePath = uploadPath.resolve(fileName);
-                    Files.copy(image.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-                    // ✅ 저장된 파일 경로를 DB에 저장 (클라이언트에서 접근할 URL)
+                    BufferedImage originalImage = ImageIO.read(image.getInputStream());
+                    if (originalImage == null) {
+                        System.err.println("🚨 이미지 포맷을 읽을 수 없습니다: " + image.getOriginalFilename());
+                        continue; // 이미지가 손상되었거나 지원하지 않는 형식이면 건너뜀
+                    }
+
+                    // 800px 이상이면 리사이징, 작으면 원본 유지
+                    BufferedImage imageToSave = (originalImage.getWidth() > 800) ? resizeImage(originalImage, 800) : originalImage;
+
+                    ImageWriter jpgWriter = ImageIO.getImageWritersByFormatName("jpg").next();
+                    ImageWriteParam jpgWriteParam = jpgWriter.getDefaultWriteParam();
+                    jpgWriteParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                    jpgWriteParam.setCompressionQuality(0.75f); // 압축률 설정
+
+                    try (FileImageOutputStream output = new FileImageOutputStream(filePath.toFile())) {
+                        jpgWriter.setOutput(output);
+                        jpgWriter.write(null, new IIOImage(imageToSave, null, null), jpgWriteParam);
+                        jpgWriter.dispose();
+                    }
+
                     imagePaths.append("/uploads/").append(fileName).append(",");
-                    System.out.println("📌 저장된 파일: " + filePath.toAbsolutePath());
+                    System.out.println("📌 저장된 리사이즈 이미지: " + filePath.toAbsolutePath());
+
                 } catch (IOException e) {
-                    System.err.println("🚨 파일 저장 중 오류 발생: " + e.getMessage());
+                    System.err.println("🚨 이미지 저장 중 오류 발생: " + e.getMessage());
                 }
             }
 
@@ -125,8 +144,21 @@ public class MarkerService {
             markerData.put("image", null);
         }
 
-        // ✅ 최종 마커 등록
         markerMapper.insertPendingMarker(markerData);
+    }
+
+    private BufferedImage resizeImage(BufferedImage originalImage, int targetWidth) {
+        int width = originalImage.getWidth();
+        int height = originalImage.getHeight();
+
+        double ratio = (double) targetWidth / width;
+        int newHeight = (int) (height * ratio);
+
+        BufferedImage resized = new BufferedImage(targetWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = resized.createGraphics();
+        g.drawImage(originalImage, 0, 0, targetWidth, newHeight, null);
+        g.dispose();
+        return resized;
     }
 
     // ✅ 하버사인 공식 (Haversine Formula)
