@@ -8,9 +8,11 @@ import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -196,10 +198,10 @@ public class MarkerService {
         List<Map<String, Object>> markers = markerMapper.getMarkers();
         for (Map<String, Object> marker : markers) {
             if (marker.get("image") != null) {
-                List<String> imagePaths = List.of(marker.get("image").toString().split(","));
+                List<String> imagePaths = Arrays.asList(marker.get("image").toString().split(","));
                 List<String> fullUrls = imagePaths.stream()
                         .map(img -> "/uploads/" + img.trim())
-                        .toList();
+                        .collect(Collectors.toList());
                 marker.put("images", fullUrls);
             }
         }
@@ -210,10 +212,10 @@ public class MarkerService {
     public Map<String, Object> getMarkerById(int id) {
         Map<String, Object> marker = markerMapper.getMarkerById(id);
         if (marker != null && marker.get("image") != null) {
-            List<String> imagePaths = List.of(marker.get("image").toString().split(","));
+            List<String> imagePaths = Arrays.asList(marker.get("image").toString().split(","));
             List<String> fullUrls = imagePaths.stream()
                     .map(img -> "/uploads/" + img.trim())
-                    .toList();
+                    .collect(Collectors.toList());
             marker.put("images", fullUrls);
         }
         return marker;
