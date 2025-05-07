@@ -24,14 +24,8 @@ public class MarkerController {
     public ResponseEntity<?> requestMarker(@RequestParam("title") String title,
                                            @RequestParam("latitude") double latitude,
                                            @RequestParam("longitude") double longitude,
-                                           @RequestParam(value = "files", required = false) List<MultipartFile> images) {
+                                           @RequestParam(value = "images", required = false) List<MultipartFile> images) {
         try {
-            if (!markerService.validateImagesWithAI(images)) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("error", "농구 코트 정보와 무관한 이미지 입니다.");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-            }
-
             markerService.requestMarker(title, latitude, longitude, images);
 
             Map<String, Object> response = new HashMap<>();
